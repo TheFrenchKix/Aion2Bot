@@ -1,0 +1,16 @@
+﻿# Prefere : python install.py  (detecte le GPU et installe le bon onnxruntime)
+numpy
+opencv-python
+mss
+PySide6
+
+# Backends de capture optionnels (le plus rapide disponible est choisi automatiquement)
+windows-capture
+dxcam
+
+# Inference : NE PAS installer plusieurs variantes ensemble (voir install.py)
+#   NVIDIA : onnxruntime-gpu | AMD/Intel/DirectX 12 : onnxruntime-directml | CPU : onnxruntime
+onnxruntime
+
+# Optionnel : utiliser directement un .pt (export ONNX automatique)
+# ultralytics
