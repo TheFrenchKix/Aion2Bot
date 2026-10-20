@@ -5,7 +5,8 @@ import cv2
 
 from capture import make_capture
 from capture.winapi import list_windows, set_dpi_aware
-from inference import make_detector, resolve_model
+from autotrainer import DATASET_DIR, AutoTrainer
+from inference import NullDetector, make_detector, resolve_model
 from pipeline import Pipeline, draw
 from settings import Settings
 from user_logic import on_result
@@ -28,6 +29,10 @@ def parse_args():
     p.add_argument("--iou", type=float, default=0.45, help="NMS (modeles non end-to-end)")
     p.add_argument("--no-display", action="store_true", help="Pas de fenetre d'apercu")
     p.add_argument("--display-fps", type=int, default=30)
+    p.add_argument("--auto-trainer", action="store_true",
+                   help="Debug : enregistre des images dans dataset_auto/ pour agrandir le dataset")
+    p.add_argument("--auto-interval", type=int, default=1000,
+                   help="Une image sauvegardee toutes les N images avec detection")
     return p.parse_args()
 
 
@@ -37,7 +42,8 @@ def get_settings(args) -> Settings | None:
                         capture=args.capture,
                         provider=args.provider, conf=args.conf, iou=args.iou,
                         imgsz=args.imgsz, preview=not args.no_display,
-                        display_fps=args.display_fps)
+                        display_fps=args.display_fps, auto_trainer=args.auto_trainer,
+                        auto_trainer_interval=args.auto_interval)
     saved = Settings.load()
     if args.no_menu:
         if not saved.window:
@@ -52,7 +58,18 @@ def run(s: Settings) -> None:
     # --model non fourni en CLI : recherche automatique ; via le menu, "" = capture seule
     detector = make_detector(s.model, discover=False, imgsz=s.imgsz, conf=s.conf,
                              iou=s.iou, provider=s.provider)
-    pipe = Pipeline(capture, detector, on_result=on_result)
+    handlers = [on_result]
+    trainer = None
+    if s.auto_trainer:
+        if isinstance(detector, NullDetector):
+            print("[auto-trainer] ignore : aucun modele de detection charge")
+        else:
+            trainer = AutoTrainer(s.auto_trainer_interval, s.auto_trainer_labels, detector.names)
+            handlers.append(trainer.on_result)
+            print(f"[auto-trainer] actif : 1 image toutes les {trainer.interval} images "
+                  f"avec detection -> {DATASET_DIR}")
+    pipe = Pipeline(capture, detector,
+                    on_result=lambda frame, dets: [h(frame, dets) for h in handlers])
     pipe.start()
     try:
         period = 1.0 / max(s.display_fps, 1)
@@ -73,6 +90,8 @@ def run(s: Settings) -> None:
         pass
     finally:
         pipe.stop()
+        if trainer:
+            trainer.close()
         cv2.destroyAllWindows()
 
 

@@ -2,3 +2,6 @@
 config.json
 models/*.onnx
 models/*.pt
+dataset_auto/
+dataset_train/
+runs/

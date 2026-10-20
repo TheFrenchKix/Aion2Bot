@@ -17,6 +17,14 @@ class Settings:
     imgsz: int = 640          # utilise si l'ONNX a une taille dynamique
     preview: bool = True
     display_fps: int = 30
+    # Debug : enregistre une image toutes les N images avec detection
+    auto_trainer: bool = False
+    auto_trainer_interval: int = 1000
+    auto_trainer_labels: bool = False   # pre-annotations du modele (optionnel, dans pre_labels/)
+    # Dataset : auto-labellisation
+    label_method: str = "references"    # "references" | "model"
+    label_threshold: float = 0.75
+    label_overwrite: bool = False
 
     @classmethod
     def load(cls) -> "Settings":
